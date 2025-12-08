@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Noise Meter</title>
+<style>
+    body {  
+        text-align:center; 
+        background: linear-gradient(150deg, black, blue, white); 
+        color:black; 
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+    }
+    .dbValue { 
+        font-size:60px; 
+        margin-top:10px;
+        font-weight: bold;
+    }
+    .status { 
+        font-size:30px; 
+        margin-top:10px;
+        opacity: 0.85;
+    }
+    .container { 
+        width:350px; 
+        background:gray; 
+        padding:30px; 
+        border-radius:15px; 
+        box-shadow:0 0 25px gray;
+    }
+    .progressBar {
+    width: 100%;
+    height: 20px;
+    background: black;
+    border-radius: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+    }
+    .progressFill {
+    height: 100%;
+    width: 0%;
+    background: #4ade80;
+    border-radius: 10px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Noise Level Monitor</h2>
+    <div class="dbValue" id="db">-- dB</div>
+    <div class="status" id="status">Waiting for data...</div>
+    <div class="progressBar">
+        <div class="progressFill" id="progressFill"></div>
+    </div>
+</div>
+
+<script>
+    async function update() {
+    //test
+    let dB = Math.floor(Math.random()*100);
+
+    document.getElementById("db").innerText = dB + " dB";
+
+    let percentage = Math.min((dB / 100) * 100, 100);
+    let progressBar = document.getElementById("progressFill");
+    progressBar.style.width = percentage + "%";
+    
+    if(dB < 50) {
+        document.getElementById("status").innerText = "Quiet";
+        progressBar.style.background = "green";
+    }
+    else if(dB < 70) {
+        document.getElementById("status").innerText = "Moderate";
+        progressBar.style.background = "yellow";
+    }
+    else {
+        document.getElementById("status").innerText = "Loud";
+        progressBar.style.background = "red";
+    }
+} 
+
+    setInterval(update, 1000);
+</script>
+
+</body>
+</html>
