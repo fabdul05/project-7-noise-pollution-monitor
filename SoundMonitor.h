@@ -1,28 +1,24 @@
 #ifndef SOUNDMONITOR_H
 #define SOUNDMONITOR_H
 
-#include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
 
-class SoundMonitor {
+class SoundServer {
 public:
-    SoundMonitor(int pin, int threshold);
-
+    SoundServer(int soundPin, int threshold);
     void begin(const char* ssid, const char* password);
     void update();
 
 private:
-    int soundPin;
-    int threshold;
-    bool noiseActive;
-    int lastSoundValue;
+    int _soundPin;
+    int _threshold;
 
-    WebServer server;
-
+    void handleRoot();
     void handleSound();
-    void handleState();
-    void handleJSON();
+
+    WebServer server{80};
 };
 
 #endif
+
