@@ -1,68 +1,71 @@
 #include "SoundMonitor.h"
 
-SoundMonitor::SoundMonitor(int pin, int thresh)
-    : soundPin(pin), threshold(thresh),
-      noiseActive(false), lastSoundValue(0), server(80) {}
+int currentSoundValue = 0;
+unsigned long lastWebUpdate = 0;
+const unsigned long WEB_UPDATE_INTERVAL = 10;
+int filteredValue = 0;
+int lastGoodValue = 0;
 
-void SoundMonitor::begin(const char* ssid, const char* password) {
-    Serial.begin(115200);
-    delay(500);
+SoundServer::SoundServer(int soundPin, int threshold)
+    : _soundPin(soundPin), _threshold(threshold) {}
 
-    Serial.println("Connecting to WiFi...");
+void SoundServer::begin(const char* ssid, const char* password) {
     WiFi.begin(ssid, password);
 
+    Serial.print("Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED) {
-        delay(300);
+        delay(200);
         Serial.print(".");
     }
-
-    Serial.println("\nWiFi connected");
-    Serial.print("ESP32 IP Address: ");
+    Serial.println("\nConnected!");
+    Serial.print("IP: ");
     Serial.println(WiFi.localIP());
 
-    // API Endpoints
-    server.on("/sound", std::bind(&SoundMonitor::handleSound, this));
-    server.on("/state", std::bind(&SoundMonitor::handleState, this));
-    server.on("/json",  std::bind(&SoundMonitor::handleJSON,  this));
+    // Setup HTTP routes
+    server.on("/",    [this]() { handleRoot(); });
+    server.on("/sound", [this]() { handleSound(); });
 
     server.begin();
-    Serial.println("REST API server started");
 }
 
-void SoundMonitor::handleSound() {
-    server.send(200, "text/plain", String(lastSoundValue));
-}
-
-void SoundMonitor::handleState() {
-    server.send(200, "text/plain", noiseActive ? "loud" : "normal");
-}
-
-void SoundMonitor::handleJSON() {
-    String json = "{";
-    json += "\"sound\":" + String(lastSoundValue) + ",";
-    json += "\"threshold\":" + String(threshold) + ",";
-    json += "\"state\":\"" + String(noiseActive ? "loud" : "normal") + "\"";
-    json += "}";
-    server.send(200, "application/json", json);
-}
-
-void SoundMonitor::update() {
-    server.handleClient();   // handle web requests
-
-    int soundValue = analogRead(soundPin);
+void SoundServer::update() {
+    currentSoundValue = analogRead(_soundPin);
 
     Serial.print("Sound level: ");
-    Serial.println(soundValue);
+    Serial.println(currentSoundValue);
+    static bool hasGoodValue = false;
 
-    if (soundValue > threshold && !noiseActive) {
-        noiseActive = true;
-        Serial.println("⚠️ Noise threshold exceeded!");
+    if (!hasGoodValue) {
+        if (currentSoundValue > 0) {
+            lastGoodValue = currentSoundValue;
+            filteredValue = currentSoundValue;
+            hasGoodValue = true;
+        }
+    } else {
+        if (currentSoundValue > 0) {
+            lastGoodValue = currentSoundValue;
+            filteredValue = currentSoundValue;
+        } else {
+            filteredValue = lastGoodValue;
+        }
+    }
+    server.handleClient();
+}
+
+void SoundServer::handleRoot() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "text/plain", "ESP32 Sound Sensor API");
+}
+
+void SoundServer::handleSound() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    unsigned long now = millis();
+    if (now - lastWebUpdate < WEB_UPDATE_INTERVAL) {
+        server.send(200, "text/plain", String(currentSoundValue));
+        return;
     }
 
-    if (soundValue <= threshold && noiseActive) {
-        noiseActive = false;
-        Serial.println("Noise back to normal.");
-    }
-    delay(20);
+    lastWebUpdate = now;
+    server.send(200, "text/plain", String(currentSoundValue));
 }
 
