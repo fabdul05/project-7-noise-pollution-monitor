@@ -58,32 +58,49 @@
 </div>
 
 <script>
+    let lastGoodValue = 0;
+
     async function update() {
-    //test
-    let dB = Math.floor(Math.random()*100);
+       try {
+            const response = await fetch('http://10.0.0.142/sound');
+            let dB = parseInt(await response.text());
 
-    document.getElementById("db").innerText = dB + " dB";
+            // Ignore 0 readings entirely
+            if (dB === 0) {
+                dB = lastGoodValue;
+            } else {
+                lastGoodValue = dB;
+            }
 
-    let percentage = Math.min((dB / 100) * 100, 100);
-    let progressBar = document.getElementById("progressFill");
-    progressBar.style.width = percentage + "%";
+            document.getElementById("db").innerText = dB + " dB";
+
+            let percentage = Math.min((dB / 4095) * 100, 100);
+            let progressBar = document.getElementById("progressFill");
+            progressBar.style.width = percentage + "%";
     
-    if(dB < 50) {
-        document.getElementById("status").innerText = "Quiet";
-        progressBar.style.background = "green";
+            if(dB < 1000) {
+                document.getElementById("status").innerText = "Quiet";
+                progressBar.style.background = "green";
+            }
+            else if(dB < 2500) {
+                document.getElementById("status").innerText = "Moderate";
+                progressBar.style.background = "yellow";
+            }
+            else {
+                document.getElementById("status").innerText = "Loud";
+                progressBar.style.background = "red";
+            }
+        } catch(error) {
+            console.error("Error:", error);
+            document.getElementById("status").innerText = "Connection Error";
+            document.getElementById("db").innerText = "-- dB";
+        }
     }
-    else if(dB < 70) {
-        document.getElementById("status").innerText = "Moderate";
-        progressBar.style.background = "yellow";
-    }
-    else {
-        document.getElementById("status").innerText = "Loud";
-        progressBar.style.background = "red";
-    }
-} 
 
-    setInterval(update, 1000);
+    setInterval(update, 20);
+    update();
 </script>
 
 </body>
 </html>
+
