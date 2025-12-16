@@ -1,8 +1,8 @@
 #include "SoundMonitor.h"
 
 // Replace with your WiFi credentials
-const char* ssid     = "EDBTZ";
-const char* password = "smilingwind367";
+const char* ssid     = "Your Wifi Name";
+const char* password = "Your Wifi Password";
 
 SoundServer soundServer(33, 1200);
 
