@@ -23,26 +23,33 @@
         opacity: 0.85;
     }
     .container { 
-        width:350px; 
+        width:450px; 
         background:gray; 
         padding:30px; 
         border-radius:15px; 
         box-shadow:0 0 25px gray;
     }
     .progressBar {
-    width: 100%;
-    height: 20px;
-    background: black;
-    border-radius: 10px;
-    margin-top: 20px;
-    overflow: hidden;
+        width: 100%;
+        height: 20px;
+        background: black;
+        border-radius: 10px;
+        margin-top: 20px;
+        overflow: hidden;
     }
     .progressFill {
-    height: 100%;
-    width: 0%;
-    background: #4ade80;
-    border-radius: 10px;
-    transition: width 0.3s ease, background-color 0.3s ease;
+        height: 100%;
+        width: 0%;
+        background: #4ade80;
+        border-radius: 10px;
+        transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    canvas {
+        margin-top: 25px;
+        width: 100%;
+        height: 150px;
+        background: black;
+        border-radius: 10px;
     }
 </style>
 </head>
@@ -52,17 +59,28 @@
     <h2>Noise Level Monitor</h2>
     <div class="dbValue" id="db">-- dB</div>
     <div class="status" id="status">Waiting for data...</div>
+
     <div class="progressBar">
         <div class="progressFill" id="progressFill"></div>
+    </div>
+
+    <!-- GRAPH -->
+    <canvas id="graph" width="400" height="150"></canvas>
+
+    <!-- LAST 20 READINGS -->
+    <h3 style="margin-top:20px;">Last 20 Readings</h3>
+    <div id="historyList" style="background:black; color:lime; padding:10px; border-radius:8px;
+                                 font-family:monospace; font-size:18px; text-align:left;">
     </div>
 </div>
 
 <script>
     let lastGoodValue = 0;
+    let history = Array(10).fill(0);  // last 10 readings at start
 
     async function update() {
        try {
-            const response = await fetch('http://10.0.0.142/sound');
+            const response = await fetch('http://192.168.137.249/sound');
             let dB = parseInt(await response.text());
 
             // Ignore 0 readings entirely
@@ -72,17 +90,19 @@
                 lastGoodValue = dB;
             }
 
+            // Update text
             document.getElementById("db").innerText = dB + " dB";
 
+            // Update progress bar
             let percentage = Math.min((dB / 4095) * 100, 100);
             let progressBar = document.getElementById("progressFill");
             progressBar.style.width = percentage + "%";
-    
-            if(dB < 1000) {
+
+            if(dB < 350) {
                 document.getElementById("status").innerText = "Quiet";
                 progressBar.style.background = "green";
             }
-            else if(dB < 2500) {
+            else if(dB < 1200) {
                 document.getElementById("status").innerText = "Moderate";
                 progressBar.style.background = "yellow";
             }
@@ -90,11 +110,57 @@
                 document.getElementById("status").innerText = "Loud";
                 progressBar.style.background = "red";
             }
+
+            // ---- GRAPH + HISTORY UPDATE ----
+            history.push(dB);
+            if (history.length > 20) history.shift();
+
+            drawGraph();
+            updateHistoryList();
+
         } catch(error) {
             console.error("Error:", error);
             document.getElementById("status").innerText = "Connection Error";
             document.getElementById("db").innerText = "-- dB";
         }
+    }
+
+    function drawGraph() {
+        let canvas = document.getElementById("graph");
+        let ctx = canvas.getContext("2d");
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Background grid lines
+        ctx.strokeStyle = "gray";
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 4; i++) {
+            let y = (canvas.height / 5) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        // Draw line
+        ctx.strokeStyle = "lime";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        history.forEach((value, index) => {
+            let x = index * (canvas.width / 9);
+            let y = canvas.height - (value / 4095 * canvas.height);
+
+            if (index === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+
+        ctx.stroke();
+    }
+
+    function updateHistoryList() {
+        let last20 = history.slice(-20);
+        document.getElementById("historyList").innerText = last20.join(", ");
     }
 
     setInterval(update, 20);
@@ -103,4 +169,3 @@
 
 </body>
 </html>
-
