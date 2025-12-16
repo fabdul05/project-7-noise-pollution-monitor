@@ -80,7 +80,7 @@
 
     async function update() {
        try {
-            const response = await fetch('http://192.168.137.249/sound');
+            const response = await fetch('http://Your ESP32 IP Address/sound');
             let dB = parseInt(await response.text());
 
             // Ignore 0 readings entirely
@@ -169,3 +169,4 @@
 
 </body>
 </html>
+
